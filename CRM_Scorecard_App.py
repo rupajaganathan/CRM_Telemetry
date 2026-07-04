@@ -385,7 +385,15 @@ For boolean columns: `TRUE`/`FALSE` or `1`/`0`.
 
 
 # ─── Load data ────────────────────────────────────────────────────────
-pipeline_df = load_csv(up_pipeline, "pipeline_summary") if up_pipeline else None
+# Load pipeline: use upload if provided, otherwise fall back to bundled CSV in repo
+if up_pipeline:
+    pipeline_df = load_csv(up_pipeline, "pipeline_summary")
+else:
+    try:
+        pipeline_df = pd.read_csv("pipeline_summary.csv")
+        pipeline_df.columns = [c.strip().lower().replace(" ", "_") for c in pipeline_df.columns]
+    except FileNotFoundError:
+        pipeline_df = None
 
 demo_mode = not any([up_opps, up_stages, up_refs, up_tasks, up_acts, up_users])
 
