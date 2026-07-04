@@ -433,67 +433,112 @@ with tab1:
     if pipeline_df is not None and not pipeline_df.empty:
         st.markdown('<div class="section-head">Executive Summary</div>', unsafe_allow_html=True)
 
-        total_opps = int(pipeline_df["opportunity_count"].sum())
-        total_won  = int(pipeline_df["closed_won"].sum())
-        won_rate   = round(total_won / total_opps * 100, 1) if total_opps else 0
+        # Segment rows
+        df = pipeline_df.copy()
+        df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
+        approved = df[~((df["source"] == "ai_email") & (df["intake_pending"] == "true"))]
+        pending  = df[(df["source"] == "ai_email") & (df["intake_pending"] == "true")]
 
-        c1, c2, c3, c4 = st.columns(4)
+        total_opps    = int(approved["opportunity_count"].sum())
+        total_sls     = int(approved["service_line_count"].sum())
+        total_won     = int(approved["closed_won"].sum())
+        won_rate      = round(total_won / total_opps * 100, 1) if total_opps else 0
+        pending_count = int(pending["opportunity_count"].sum())
+
+        st.caption("Metrics below are based on **approved opportunities only** (Manual entries + AI Email reviewed). "
+                   "AI Email pending review are excluded from rates and shown separately.")
+
+        c1, c2, c3, c4, c5 = st.columns(5)
         with c1:
             card("Opportunities", f"{total_opps:,}",
-                 sub="Excludes migration / Ascend records",
-                 note="Sum across all partner firms and sources.")
+                 sub="Approved (manual + AI reviewed)",
+                 note="Excludes AI email pending review and migration records.")
         with c2:
-            card("Service Lines", f"{int(pipeline_df['service_line_count'].sum()):,}",
-                 sub="across all opportunities",
-                 note="Total service line records linked to opportunities.")
+            card("Service Lines", f"{total_sls:,}",
+                 sub="on approved opportunities",
+                 note="Total service line records.")
         with c3:
             card("Closed Won", f"{total_won:,}",
+                 sub="on approved opportunities",
                  note="Opportunities with a Closed Won outcome.")
         with c4:
             card("Close Rate", f"{won_rate}%",
-                 note="Closed Won / total Opportunities.")
+                 sub="Closed Won / approved opps",
+                 note="Excludes AI pending — not yet in the real pipeline.")
+        with c5:
+            st.markdown(f"""
+            <div class="metric-card" style="border-left-color: #f59e0b;">
+              <div class="metric-label">AI Email — Pending Review</div>
+              <div class="metric-value" style="color:#b45309;">{pending_count:,}</div>
+              <div class="metric-sub">awaiting user approval</div>
+              <div class="data-note">Not counted in any rate metrics until approved.</div>
+            </div>""", unsafe_allow_html=True)
 
-        st.markdown("**Breakdown by firm**")
+        st.markdown("**Breakdown by firm** — approved opportunities only")
         breakdown = (
-            pipeline_df
+            approved
             .groupby("firm_name", as_index=False)
             .agg(
                 Opportunities=("opportunity_count", "sum"),
-                Closed_Won=("closed_won", "sum"),
                 Service_Lines=("service_line_count", "sum"),
+                Closed_Won=("closed_won", "sum"),
             )
         )
+        pending_by_firm = (
+            pending
+            .groupby("firm_name", as_index=False)
+            .agg(AI_Pending=("opportunity_count", "sum"))
+        )
+        breakdown = breakdown.merge(pending_by_firm, on="firm_name", how="left").fillna(0)
+        breakdown["AI_Pending"] = breakdown["AI_Pending"].astype(int)
         breakdown["Close Rate %"] = (breakdown["Closed_Won"] / breakdown["Opportunities"] * 100).round(1)
-        breakdown = breakdown.rename(columns={"firm_name": "Firm", "Closed_Won": "Closed Won", "Service_Lines": "Service Lines"})
+        breakdown = breakdown.rename(columns={
+            "firm_name": "Firm", "Closed_Won": "Closed Won",
+            "Service_Lines": "Service Lines", "AI_Pending": "AI Pending Review"
+        })
+        breakdown = breakdown[["Firm", "Opportunities", "Service Lines", "Closed Won", "Close Rate %", "AI Pending Review"]]
         st.dataframe(breakdown, use_container_width=True, hide_index=True)
 
-        st.markdown("**AI Email vs Manual — Opportunities by Firm**")
-        source_grp = (
-            pipeline_df
-            .groupby(["firm_name", "source"], as_index=False)
+        st.markdown("**Intake breakdown by firm** — Manual / AI Approved / AI Pending")
+        chart_df = df.copy()
+        def label_source(row):
+            if row["source"] == "manual":
+                return "Manual"
+            elif row["intake_pending"] == "true":
+                return "AI Email — Pending"
+            else:
+                return "AI Email — Approved"
+        chart_df["Category"] = chart_df.apply(label_source, axis=1)
+        chart_grp = (
+            chart_df
+            .groupby(["firm_name", "Category"], as_index=False)
             .agg(Opportunities=("opportunity_count", "sum"))
-            .rename(columns={"firm_name": "Firm", "source": "Source"})
+            .rename(columns={"firm_name": "Firm"})
         )
-        source_grp["Source"] = source_grp["Source"].replace({"ai_email": "AI Email", "manual": "Manual"})
 
+        color_map = {
+            "Manual":              "#70AD47",
+            "AI Email — Approved": "#2E75B6",
+            "AI Email — Pending":  "#F59E0B",
+        }
         ch1, ch2 = st.columns([2, 1])
         with ch1:
             fig_bar = px.bar(
-                source_grp, x="Firm", y="Opportunities", color="Source",
+                chart_grp, x="Firm", y="Opportunities", color="Category",
                 barmode="group",
-                color_discrete_map={"AI Email": "#2E75B6", "Manual": "#70AD47"},
-                height=320,
+                color_discrete_map=color_map,
+                height=340,
             )
             fig_bar.update_layout(margin=dict(t=20, b=20), legend_title_text="")
             st.plotly_chart(fig_bar, use_container_width=True)
 
         with ch2:
-            source_total = source_grp.groupby("Source")["Opportunities"].sum().reset_index()
+            total_grp = chart_grp.groupby("Category")["Opportunities"].sum().reset_index()
             fig_pie = px.pie(
-                source_total, values="Opportunities", names="Source",
-                color="Source",
-                color_discrete_map={"AI Email": "#2E75B6", "Manual": "#70AD47"},
-                height=320,
+                total_grp, values="Opportunities", names="Category",
+                color="Category",
+                color_discrete_map=color_map,
+                height=340,
             )
             fig_pie.update_traces(textinfo="percent+label")
             fig_pie.update_layout(margin=dict(t=20, b=20), showlegend=False)
