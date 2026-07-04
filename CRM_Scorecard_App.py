@@ -390,7 +390,9 @@ if up_pipeline:
     pipeline_df = load_csv(up_pipeline, "pipeline_summary")
 else:
     try:
-        pipeline_df = pd.read_csv("pipeline_summary.csv")
+        import os
+        _csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pipeline_summary.csv")
+        pipeline_df = pd.read_csv(_csv)
         pipeline_df.columns = [c.strip().lower().replace(" ", "_") for c in pipeline_df.columns]
     except FileNotFoundError:
         pipeline_df = None
