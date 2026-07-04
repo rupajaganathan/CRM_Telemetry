@@ -1,19 +1,19 @@
-firm_name,source,intake_pending,opportunity_count,service_line_count,closed_won
-ATKG,Email,FALSE,9,19,0
-ATKG,Email,TRUE,17,33,0
-ATKG,UI,NULL,18,28,0
-LevitZacks,Email,FALSE,21,53,0
-LevitZacks,Email,TRUE,27,46,0
-LevitZacks,UI,NULL,9,11,2
-Lucas Horsfall,Email,FALSE,79,127,0
-Lucas Horsfall,Email,TRUE,11,18,0
-Lucas Horsfall,UI,NULL,4,5,3
-Opsahl Dawson,Email,FALSE,46,77,1
-Opsahl Dawson,Email,TRUE,106,196,0
-Opsahl Dawson,UI,NULL,19,22,6
-TSS,Email,FALSE,5,8,0
-TSS,Email,TRUE,25,41,0
-TSS,UI,NULL,13,14,3
-Walter Shuffain,Email,FALSE,68,118,0
-Walter Shuffain,Email,TRUE,107,244,0
-Walter Shuffain,UI,NULL,5,9,0
+"firm_name","source","intake_pending","opportunity_count","service_line_count","closed_won"
+"ATKG","ai_email",False,9,19,0
+"ATKG","ai_email",True,17,33,0
+"ATKG","manual",NULL,18,28,0
+"LevitZacks","ai_email",False,21,53,0
+"LevitZacks","ai_email",True,27,46,0
+"LevitZacks","manual",NULL,9,11,2
+"Lucas Horsfall","ai_email",False,79,127,0
+"Lucas Horsfall","ai_email",True,11,18,0
+"Lucas Horsfall","manual",NULL,4,5,3
+"Opsahl Dawson","ai_email",False,46,77,1
+"Opsahl Dawson","ai_email",True,106,196,0
+"Opsahl Dawson","manual",NULL,19,22,6
+"TSS","ai_email",False,5,8,0
+"TSS","ai_email",True,25,41,0
+"TSS","manual",NULL,13,14,3
+"Walter Shuffain","ai_email",False,68,118,0
+"Walter Shuffain","ai_email",True,107,244,0
+"Walter Shuffain","manual",NULL,5,9,0
