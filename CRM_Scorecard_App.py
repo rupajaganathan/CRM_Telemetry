@@ -491,7 +491,7 @@ with tab1:
         bd["SL Pending"]       = firm_agg(ai_pend,  "SL Pending",       "service_line_count")
         bd["Closed Won"]       = firm_agg(approved, "Closed Won",       "closed_won")
         bd = bd.fillna(0).astype(int)
-        bd["Close Rate %"] = (bd["Closed Won"] / bd["Opps Approved"].replace(0, pd.NA) * 100).round(1).fillna(0)
+        bd["Close Rate %"] = (bd["Closed Won"] / bd["Opps Approved"].apply(lambda x: x if x > 0 else float("nan")) * 100).fillna(0).round(1)
         bd.index.name = "Firm"
         st.dataframe(bd, use_container_width=True)
 
