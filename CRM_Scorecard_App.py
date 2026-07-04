@@ -476,7 +476,7 @@ with tab1:
         with c5:
             st.markdown(f"""
             <div class="metric-card" style="border-left-color: #f59e0b;">
-              <div class="metric-label">AI Email — Pending Review</div>
+              <div class="metric-label">Email Opps — Pending Review</div>
               <div class="metric-value" style="color:#b45309;">{opps_pend:,}</div>
               <div class="metric-sub">awaiting user approval</div>
               <div class="data-note">Not counted in any rate metrics until approved.</div>
