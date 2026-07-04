@@ -428,211 +428,93 @@ if demo_mode:
     st.markdown('<div class="demo-banner">⚠ <strong>Demo mode</strong> — showing sample data. Upload your CRM CSV exports in the sidebar to see real numbers.</div>', unsafe_allow_html=True)
 
 st.divider()
+tab1, tab2 = st.tabs(["Overview", "Coming Soon"])
 
-# ─── Executive Summary ────────────────────────────────────────────────
-if pipeline_df is not None and not pipeline_df.empty:
-    st.markdown('<div class="section-head">Executive Summary</div>', unsafe_allow_html=True)
+# ─── Tab 1: Overview (real data) ──────────────────────────────────────
+with tab1:
+    if pipeline_df is not None and not pipeline_df.empty:
+        st.markdown('<div class="section-head">Executive Summary</div>', unsafe_allow_html=True)
 
-    total_opps    = int(pipeline_df["opportunity_count"].sum())
-    total_won     = int(pipeline_df["closed_won"].sum())
-    won_rate      = round(total_won / total_opps * 100, 1) if total_opps else 0
+        total_opps = int(pipeline_df["opportunity_count"].sum())
+        total_won  = int(pipeline_df["closed_won"].sum())
+        won_rate   = round(total_won / total_opps * 100, 1) if total_opps else 0
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        card("Opportunities Created", f"{total_opps:,}",
-             sub="Excludes migration / Ascend records",
-             note="Sum across all partner firms and sources.")
-    with c2:
-        card("Closed Won", f"{total_won:,}",
-             sub=f"{won_rate}% close rate",
-             note="Opportunities with a Closed Won outcome.")
-    with c3:
-        card("Service Lines", f"{int(pipeline_df['service_line_count'].sum()):,}",
-             sub="across all opportunities",
-             note="Total service line records linked to opportunities.")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            card("Opportunities Created", f"{total_opps:,}",
+                 sub="Excludes migration / Ascend records",
+                 note="Sum across all partner firms and sources.")
+        with c2:
+            card("Closed Won", f"{total_won:,}",
+                 sub=f"{won_rate}% close rate",
+                 note="Opportunities with a Closed Won outcome.")
+        with c3:
+            card("Service Lines", f"{int(pipeline_df['service_line_count'].sum()):,}",
+                 sub="across all opportunities",
+                 note="Total service line records linked to opportunities.")
 
-    st.markdown("**Breakdown by firm**")
-    breakdown = (
-        pipeline_df
-        .groupby("firm_name", as_index=False)
-        .agg(
-            Opportunities=("opportunity_count", "sum"),
-            Closed_Won=("closed_won", "sum"),
-            Service_Lines=("service_line_count", "sum"),
+        st.markdown("**Breakdown by firm**")
+        breakdown = (
+            pipeline_df
+            .groupby("firm_name", as_index=False)
+            .agg(
+                Opportunities=("opportunity_count", "sum"),
+                Closed_Won=("closed_won", "sum"),
+                Service_Lines=("service_line_count", "sum"),
+            )
         )
-    )
-    breakdown["Close Rate %"] = (breakdown["Closed_Won"] / breakdown["Opportunities"] * 100).round(1)
-    breakdown = breakdown.rename(columns={"firm_name": "Firm", "Closed_Won": "Closed Won", "Service_Lines": "Service Lines"})
-    st.dataframe(breakdown, use_container_width=True, hide_index=True)
+        breakdown["Close Rate %"] = (breakdown["Closed_Won"] / breakdown["Opportunities"] * 100).round(1)
+        breakdown = breakdown.rename(columns={"firm_name": "Firm", "Closed_Won": "Closed Won", "Service_Lines": "Service Lines"})
+        st.dataframe(breakdown, use_container_width=True, hide_index=True)
 
-    # AI email vs manual split
-    st.markdown("**AI email vs Manual intake**")
-    source_grp = (
-        pipeline_df
-        .groupby(["firm_name", "source"], as_index=False)
-        .agg(Opportunities=("opportunity_count", "sum"))
-        .rename(columns={"firm_name": "Firm", "source": "Source"})
-    )
-    st.dataframe(source_grp, use_container_width=True, hide_index=True)
-
-    st.divider()
-
-
-# ─── M1 + M2: Deal Velocity ───────────────────────────────────────────
-st.markdown('<div class="section-head">Deal Velocity</div>', unsafe_allow_html=True)
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    dwell = m1_stage_dwell(stages_df) if len(stages_df) else pd.Series(dtype=float)
-    st.markdown("**M1 — Average Stage Dwell Time** (days)")
-    if not dwell.empty:
-        bottleneck = dwell.idxmax()
-        st.dataframe(
-            dwell.reset_index().rename(columns={"stage_name": "Stage", "days": "Avg Days"}),
-            use_container_width=True, hide_index=True
+        st.markdown("**AI email vs Manual intake**")
+        source_grp = (
+            pipeline_df
+            .groupby(["firm_name", "source"], as_index=False)
+            .agg(Opportunities=("opportunity_count", "sum"))
+            .rename(columns={"firm_name": "Firm", "source": "Source"})
         )
-        st.caption(f"Longest stage: **{bottleneck}** ({dwell.max()} days avg)")
+        st.dataframe(source_grp, use_container_width=True, hide_index=True)
+
     else:
-        st.info("No stage history data available.")
-
-with col2:
-    if len(refs_df):
-        avg_days, gap_pct = m2_referral_response(refs_df)
-        card(
-            "M2 — Referral Response Time",
-            f"{avg_days} days",
-            sub=f"{gap_pct}% of referrals had no Opportunity within 90 days",
-            status_html=status(avg_days, 14, 21, higher_is_better=False),
-            note="Avg days: Referral created → first Opportunity. Excludes referrals with no linked Opportunity."
-        )
-    else:
-        st.info("No referral data available.")
+        st.info("Upload **pipeline_summary.csv** in the sidebar to see the Executive Summary.")
 
 
-# ─── M3: Pipeline Health ──────────────────────────────────────────────
-st.markdown('<div class="section-head">Pipeline Health</div>', unsafe_allow_html=True)
+# ─── Tab 2: Coming Soon ───────────────────────────────────────────────
+with tab2:
+    st.markdown('<div class="section-head">Metrics in Development</div>', unsafe_allow_html=True)
+    st.caption("These metrics will be added as CRM data exports become available.")
 
-conv = m3_stage_conversion(stages_df, opps_df) if (len(stages_df) and len(opps_df)) else pd.Series(dtype=float)
-st.markdown("**M3 — Stage Conversion Rate** (% of all Opportunities that reached each stage)")
-if not conv.empty:
-    import streamlit as _st
-    conv_df = conv.reset_index().rename(columns={"index": "Stage", 0: "% Reached"})
-    col_a, col_b = st.columns([2, 1])
-    with col_a:
-        st.bar_chart(conv, use_container_width=True, color="#2E75B6", height=220)
-    with col_b:
-        st.dataframe(conv_df, use_container_width=True, hide_index=True)
-else:
-    st.info("No stage or opportunity data available.")
+    coming_soon = [
+        ("Deal Velocity", [
+            ("M1", "Average Stage Dwell Time", "How long opportunities sit in each stage before moving forward."),
+            ("M2", "Referral Response Time", "Days from referral created to first opportunity logged."),
+        ]),
+        ("Pipeline Health", [
+            ("M3", "Stage Conversion Rate", "% of opportunities that reached each stage."),
+        ]),
+        ("Referral Performance", [
+            ("M4", "Referral-to-Won Conversion", "% of referrals that resulted in a closed won opportunity."),
+        ]),
+        ("Operational Efficiency", [
+            ("M5", "Task Completion Rate", "% of user-created tasks completed on time."),
+            ("M6", "Overdue Task Rate", "% of open tasks past their due date."),
+            ("M7", "Opportunities Logged YTD", "New opportunities created year-to-date vs prior year."),
+            ("M8", "User-Initiated Activities per Opp", "Avg calls, notes, meetings per closed opportunity."),
+        ]),
+        ("Adoption", [
+            ("M9",  "Login Rate", "% of licensed users who logged in this month."),
+            ("M10", "Manual Engagement Rate", "% of licensed users who created at least one record this month."),
+        ]),
+    ]
 
-
-# ─── M4: Referral Performance ─────────────────────────────────────────
-st.markdown('<div class="section-head">Referral Performance</div>', unsafe_allow_html=True)
-
-if len(refs_df):
-    won_pct, opp_pct = m4_referral_conversion(refs_df)
-    col1, col2 = st.columns(2)
-    with col1:
-        card("M4 — Referral-to-Won Conversion Rate", f"{won_pct}%",
-             sub=f"{opp_pct}% of referrals became an Opportunity",
-             status_html=status(won_pct, 40, 25),
-             note="Won / total Referrals. Distinct from win rate by source (which only counts deals already in pipeline).")
-    with col2:
-        total_refs = len(refs_df)
-        no_opp = refs_df["linked_opportunity_id"].isna().sum()
-        card("Referral Gap", f"{no_opp} of {total_refs}",
-             sub="referrals with no Opportunity logged",
-             note="These referrals never entered the pipeline.")
-else:
-    st.info("No referral data available.")
+    for category, metrics in coming_soon:
+        st.markdown(f"**{category}**")
+        for code, name, desc in metrics:
+            st.markdown(f"- **{code} — {name}:** {desc}")
+        st.write("")
 
 
-# ─── M5–M8: Operational Efficiency ───────────────────────────────────
-st.markdown('<div class="section-head">Operational Efficiency</div>', unsafe_allow_html=True)
-
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    if len(tasks_df):
-        tc = m5_task_completion(tasks_df)
-        card("M5 — Task Completion Rate", f"{tc}%",
-             status_html=status(tc, 70, 50),
-             note="User-created tasks only. Excludes system auto-tasks.")
-    else:
-        st.info("No task data.")
-
-with col2:
-    if len(tasks_df):
-        od = m6_overdue_tasks(tasks_df)
-        card("M6 — Overdue Task Rate", f"{od}%",
-             sub="of open tasks are past due",
-             status_html=status(od, 15, 30, higher_is_better=False),
-             note="Open tasks with DueDate < today.")
-    else:
-        st.info("No task data.")
-
-with col3:
-    if len(opps_df):
-        ytd = m7_opps_ytd(opps_df)
-        card("M7 — Opportunities Logged YTD", f"{ytd:,}",
-             note=f"Opportunities created in {today.year}.")
-    else:
-        st.info("No opportunity data.")
-
-with col4:
-    if len(acts_df) and len(opps_df):
-        apo = m8_activities_per_opp(acts_df, opps_df)
-        card("M8 — User-Initiated Activities / Opp", f"{apo}",
-             status_html=status(apo, 4, 2),
-             note="Calls, Notes, Meetings per closed Opp. Excludes Fireflies & auto-email.")
-    else:
-        st.info("No activity data.")
-
-
-# --- M9-M10: Adoption ---
-st.markdown('<div class="section-head">Adoption</div>', unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns([1, 1, 2])
-
-if len(users_df):
-    login_r = m9_login_rate(users_df)
-    eng_r   = m10_engagement_rate(users_df)
-    gap     = round(login_r - eng_r, 1)
-
-    with col1:
-        card("M9 — Login Rate", f"{login_r}%",
-             sub=f"of {len(users_df)} licensed users logged in this month",
-             status_html=status(login_r, 70, 50),
-             note="Access signal.")
-
-    with col2:
-        card("M10 — Manual Engagement Rate", f"{eng_r}%",
-             sub=f"created at least one user-initiated record",
-             status_html=status(eng_r, 55, 35),
-             note="Genuine use signal. Excludes system-generated records.")
-
-    with col3:
-        st.markdown("**Adoption gap by firm**")
-        if "firm_id" in users_df.columns:
-            def firm_stats(df):
-                out = []
-                for firm, grp in df.groupby("firm_id"):
-                    lr = grp["logged_in_this_month"].apply(lambda x: str(x).upper() in ("TRUE","1","YES")).mean() * 100
-                    er = grp["manually_engaged_this_month"].apply(lambda x: str(x).upper() in ("TRUE","1","YES")).mean() * 100
-                    out.append({"Firm": firm, "Login %": round(lr,1), "Engaged %": round(er,1),
-                                "Gap": round(lr-er,1), "Users": len(grp)})
-                return pd.DataFrame(out).sort_values("Gap", ascending=False)
-            firm_df = firm_stats(users_df)
-            st.dataframe(firm_df, use_container_width=True, hide_index=True)
-            st.caption("Gap = Login Rate - Engagement Rate. High gap = users accessing but not using.")
-        else:
-            st.metric("Login vs Engaged gap", f"{gap}pp",
-                      help="Users logging in but not creating records.")
-else:
-    st.info("No user data available.")
-
-
-# --- Footer ---
+# ─── Footer ───────────────────────────────────────────────────────────
 st.divider()
-st.caption("Ascend Together | CRM Program | These metrics are not tracked in existing reports or dashboards. "
-           "For questions contact the CRM Program team.")
+st.caption("Ascend Together | CRM Program | As of " + today.strftime('%B %d, %Y'))
