@@ -444,11 +444,13 @@ with tab1:
         # Segment rows — normalize intake_pending to string for safe comparison
         df = pipeline_df.copy()
         df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
-        df["source"] = df["source"].astype(str).str.strip()
-        # Normalize: UI entry vs Email intake
-        manual   = df[df["source"].str.upper() == "UI"]
-        ai_appr  = df[(df["source"].str.upper() == "EMAIL") & (df["intake_pending"] == "false")]
-        ai_pend  = df[(df["source"].str.upper() == "EMAIL") & (df["intake_pending"] == "true")]
+        df["source"] = df["source"].astype(str).str.strip().str.lower()
+        # Accept both naming conventions: ui/manual and email/ai_email
+        ui_vals    = ["ui", "manual"]
+        email_vals = ["email", "ai_email"]
+        manual   = df[df["source"].isin(ui_vals)]
+        ai_appr  = df[(df["source"].isin(email_vals)) & (df["intake_pending"] == "false")]
+        ai_pend  = df[(df["source"].isin(email_vals)) & (df["intake_pending"] == "true")]
         approved = pd.concat([manual, ai_appr])
 
         opps_appr  = int(approved["opportunity_count"].sum())
