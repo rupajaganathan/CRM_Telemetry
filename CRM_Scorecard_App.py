@@ -433,88 +433,77 @@ with tab1:
     if pipeline_df is not None and not pipeline_df.empty:
         st.markdown('<div class="section-head">Executive Summary</div>', unsafe_allow_html=True)
 
-        # Segment rows
+        # Segment rows — normalize intake_pending to string for safe comparison
         df = pipeline_df.copy()
         df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
-        approved = df[~((df["source"] == "ai_email") & (df["intake_pending"] == "true"))]
-        pending  = df[(df["source"] == "ai_email") & (df["intake_pending"] == "true")]
+        # manual rows: source = "manual" (intake_pending = "nan")
+        # ai approved: source = "ai_email", intake_pending = "false"
+        # ai pending:  source = "ai_email", intake_pending = "true"
+        manual   = df[df["source"] == "manual"]
+        ai_appr  = df[(df["source"] == "ai_email") & (df["intake_pending"] == "false")]
+        ai_pend  = df[(df["source"] == "ai_email") & (df["intake_pending"] == "true")]
+        approved = pd.concat([manual, ai_appr])
 
-        total_opps    = int(approved["opportunity_count"].sum())
-        total_sls     = int(approved["service_line_count"].sum())
-        total_won     = int(approved["closed_won"].sum())
-        won_rate      = round(total_won / total_opps * 100, 1) if total_opps else 0
-        pending_count = int(pending["opportunity_count"].sum())
+        opps_appr  = int(approved["opportunity_count"].sum())
+        opps_pend  = int(ai_pend["opportunity_count"].sum())
+        sl_appr    = int(approved["service_line_count"].sum())
+        sl_pend    = int(ai_pend["service_line_count"].sum())
+        total_won  = int(approved["closed_won"].sum())
+        won_rate   = round(total_won / opps_appr * 100, 1) if opps_appr else 0
 
-        st.caption("Metrics below are based on **approved opportunities only** (Manual entries + AI Email reviewed). "
-                   "AI Email pending review are excluded from rates and shown separately.")
+        st.caption("Close Rate and Closed Won are calculated on **approved opportunities only** "
+                   "(Manual + AI Email reviewed). AI Email pending review is shown separately.")
 
         c1, c2, c3, c4, c5 = st.columns(5)
         with c1:
-            card("Opportunities", f"{total_opps:,}",
-                 sub="Approved (manual + AI reviewed)",
-                 note="Excludes AI email pending review and migration records.")
+            card("Opps — Approved", f"{opps_appr:,}",
+                 sub=f"+ {opps_pend:,} pending review",
+                 note="Manual entries + AI Email approved by a user.")
         with c2:
-            card("Service Lines", f"{total_sls:,}",
-                 sub="on approved opportunities",
-                 note="Total service line records.")
+            card("Service Lines — Approved", f"{sl_appr:,}",
+                 sub=f"+ {sl_pend:,} pending review",
+                 note="SLs linked to approved opportunities.")
         with c3:
             card("Closed Won", f"{total_won:,}",
-                 sub="on approved opportunities",
+                 sub="approved opps only",
                  note="Opportunities with a Closed Won outcome.")
         with c4:
             card("Close Rate", f"{won_rate}%",
                  sub="Closed Won / approved opps",
-                 note="Excludes AI pending — not yet in the real pipeline.")
+                 note="AI pending excluded — not yet in the real pipeline.")
         with c5:
             st.markdown(f"""
             <div class="metric-card" style="border-left-color: #f59e0b;">
               <div class="metric-label">AI Email — Pending Review</div>
-              <div class="metric-value" style="color:#b45309;">{pending_count:,}</div>
+              <div class="metric-value" style="color:#b45309;">{opps_pend:,}</div>
               <div class="metric-sub">awaiting user approval</div>
               <div class="data-note">Not counted in any rate metrics until approved.</div>
             </div>""", unsafe_allow_html=True)
 
-        st.markdown("**Breakdown by firm** — approved opportunities only")
-        breakdown = (
-            approved
-            .groupby("firm_name", as_index=False)
-            .agg(
-                Opportunities=("opportunity_count", "sum"),
-                Service_Lines=("service_line_count", "sum"),
-                Closed_Won=("closed_won", "sum"),
-            )
-        )
-        pending_by_firm = (
-            pending
-            .groupby("firm_name", as_index=False)
-            .agg(AI_Pending=("opportunity_count", "sum"))
-        )
-        breakdown = breakdown.merge(pending_by_firm, on="firm_name", how="left").fillna(0)
-        breakdown["AI_Pending"] = breakdown["AI_Pending"].astype(int)
-        breakdown["Close Rate %"] = (breakdown["Closed_Won"] / breakdown["Opportunities"] * 100).round(1)
-        breakdown = breakdown.rename(columns={
-            "firm_name": "Firm", "Closed_Won": "Closed Won",
-            "Service_Lines": "Service Lines", "AI_Pending": "AI Pending Review"
-        })
-        breakdown = breakdown[["Firm", "Opportunities", "Service Lines", "Closed Won", "Close Rate %", "AI Pending Review"]]
-        st.dataframe(breakdown, use_container_width=True, hide_index=True)
+        st.markdown("**Breakdown by firm**")
+        def firm_agg(seg, col_prefix, value_col):
+            return seg.groupby("firm_name")[value_col].sum().rename(col_prefix)
+
+        bd = pd.DataFrame({"firm_name": df["firm_name"].unique()}).set_index("firm_name")
+        bd["Opps Approved"]    = firm_agg(approved, "Opps Approved",    "opportunity_count")
+        bd["Opps Pending"]     = firm_agg(ai_pend,  "Opps Pending",     "opportunity_count")
+        bd["SL Approved"]      = firm_agg(approved, "SL Approved",      "service_line_count")
+        bd["SL Pending"]       = firm_agg(ai_pend,  "SL Pending",       "service_line_count")
+        bd["Closed Won"]       = firm_agg(approved, "Closed Won",       "closed_won")
+        bd = bd.fillna(0).astype(int)
+        bd["Close Rate %"] = (bd["Closed Won"] / bd["Opps Approved"].replace(0, pd.NA) * 100).round(1).fillna(0)
+        bd.index.name = "Firm"
+        st.dataframe(bd, use_container_width=True)
 
         st.markdown("**Intake breakdown by firm** — Manual / AI Approved / AI Pending")
-        chart_df = df.copy()
-        def label_source(row):
-            if row["source"] == "manual":
-                return "Manual"
-            elif row["intake_pending"] == "true":
-                return "AI Email — Pending"
-            else:
-                return "AI Email — Approved"
-        chart_df["Category"] = chart_df.apply(label_source, axis=1)
-        chart_grp = (
-            chart_df
-            .groupby(["firm_name", "Category"], as_index=False)
-            .agg(Opportunities=("opportunity_count", "sum"))
-            .rename(columns={"firm_name": "Firm"})
-        )
+        chart_rows = []
+        for _, row in manual.iterrows():
+            chart_rows.append({"Firm": row["firm_name"], "Category": "Manual", "Opportunities": row["opportunity_count"]})
+        for _, row in ai_appr.iterrows():
+            chart_rows.append({"Firm": row["firm_name"], "Category": "AI Email — Approved", "Opportunities": row["opportunity_count"]})
+        for _, row in ai_pend.iterrows():
+            chart_rows.append({"Firm": row["firm_name"], "Category": "AI Email — Pending", "Opportunities": row["opportunity_count"]})
+        chart_grp = pd.DataFrame(chart_rows).groupby(["Firm", "Category"], as_index=False).sum()
 
         color_map = {
             "Manual":              "#70AD47",
@@ -548,7 +537,7 @@ with tab1:
         st.info("Upload **pipeline_summary.csv** in the sidebar to see the Executive Summary.")
 
 
-# ─── Tab 2: Coming Soon ───────────────────────────────────────────────
+# --- Tab 2: Coming Soon ---
 with tab2:
     st.markdown('<div class="section-head">Metrics in Development</div>', unsafe_allow_html=True)
     st.caption("These metrics will be added as CRM data exports become available.")
@@ -579,10 +568,10 @@ with tab2:
     for category, metrics in coming_soon:
         st.markdown(f"**{category}**")
         for code, name, desc in metrics:
-            st.markdown(f"- **{code} — {name}:** {desc}")
+            st.markdown(f"- **{code} -- {name}:** {desc}")
         st.write("")
 
 
-# ─── Footer ───────────────────────────────────────────────────────────
+# --- Footer ---
 st.divider()
 st.caption("Ascend Together | CRM Program | As of " + today.strftime('%B %d, %Y'))
