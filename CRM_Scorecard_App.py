@@ -436,12 +436,14 @@ with tab1:
         # Segment rows — normalize intake_pending to string for safe comparison
         df = pipeline_df.copy()
         df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
-        # manual rows: source = "manual" (intake_pending = "nan")
-        # ai approved: source = "ai_email", intake_pending = "false"
-        # ai pending:  source = "ai_email", intake_pending = "true"
-        manual   = df[df["source"] == "manual"]
-        ai_appr  = df[(df["source"] == "ai_email") & (df["intake_pending"] == "false")]
-        ai_pend  = df[(df["source"] == "ai_email") & (df["intake_pending"] == "true")]
+        # UI rows: source = "UI" (intake_pending = "nan")
+        # email approved: source = "Email", intake_pending = "false"
+        # email pending:  source = "Email", intake_pending = "true"
+        
+        
+        manual   = df[df["source"] == "UI"]
+        ai_appr  = df[(df["source"] == "Email") & (df["intake_pending"] == "false")]
+        ai_pend  = df[(df["source"] == "Email") & (df["intake_pending"] == "true")]
         approved = pd.concat([manual, ai_appr])
 
         opps_appr  = int(approved["opportunity_count"].sum())
@@ -498,17 +500,17 @@ with tab1:
         st.markdown("**Intake breakdown by firm** — Manual / AI Approved / AI Pending")
         chart_rows = []
         for _, row in manual.iterrows():
-            chart_rows.append({"Firm": row["firm_name"], "Category": "Manual", "Opportunities": row["opportunity_count"]})
+            chart_rows.append({"Firm": row["firm_name"], "Category": "UI Entry", "Opportunities": row["opportunity_count"]})
         for _, row in ai_appr.iterrows():
-            chart_rows.append({"Firm": row["firm_name"], "Category": "AI Email — Approved", "Opportunities": row["opportunity_count"]})
+            chart_rows.append({"Firm": row["firm_name"], "Category": "Email — Approved", "Opportunities": row["opportunity_count"]})
         for _, row in ai_pend.iterrows():
-            chart_rows.append({"Firm": row["firm_name"], "Category": "AI Email — Pending", "Opportunities": row["opportunity_count"]})
+            chart_rows.append({"Firm": row["firm_name"], "Category": "Email — Pending", "Opportunities": row["opportunity_count"]})
         chart_grp = pd.DataFrame(chart_rows).groupby(["Firm", "Category"], as_index=False)[["Opportunities"]].sum()
 
         color_map = {
-            "Manual":              "#70AD47",
-            "AI Email — Approved": "#2E75B6",
-            "AI Email — Pending":  "#F59E0B",
+            "UI Entry":             "#70AD47",
+            "Email — Approved":    "#2E75B6",
+            "Email — Pending":     "#F59E0B",
         }
         ch1, ch2 = st.columns([2, 1])
         with ch1:
