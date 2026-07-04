@@ -589,7 +589,7 @@ with col4:
         st.info("No activity data.")
 
 
-# ─── M9–M10: Adoption ─────────────────────────────────────────────────
+# --- M9-M10: Adoption ---
 st.markdown('<div class="section-head">Adoption</div>', unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns([1, 1, 2])
@@ -624,7 +624,7 @@ if len(users_df):
                 return pd.DataFrame(out).sort_values("Gap", ascending=False)
             firm_df = firm_stats(users_df)
             st.dataframe(firm_df, use_container_width=True, hide_index=True)
-            st.caption("Gap = Login Rate − Engagement Rate. High gap = users accessing but not using.")
+            st.caption("Gap = Login Rate - Engagement Rate. High gap = users accessing but not using.")
         else:
             st.metric("Login vs Engaged gap", f"{gap}pp",
                       help="Users logging in but not creating records.")
@@ -632,7 +632,7 @@ else:
     st.info("No user data available.")
 
 
-# ─── Footer ───────────────────────────────────────────────────────────
+# --- Footer ---
 st.divider()
 st.caption("Ascend Together | CRM Program | These metrics are not tracked in existing reports or dashboards. "
            "For questions contact the CRM Program team.")
