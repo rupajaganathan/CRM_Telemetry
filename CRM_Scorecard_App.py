@@ -19,6 +19,7 @@ Run: streamlit run CRM_Scorecard_App.py
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 from datetime import date, timedelta
 import random
 
@@ -424,9 +425,6 @@ if "firm_id" in opps_df.columns:
 st.markdown("## 📊 CRM Scorecard")
 st.caption(f"Ascend Together | Net-new metrics not tracked in existing reports | As of {today.strftime('%B %d, %Y')}")
 
-if demo_mode:
-    st.markdown('<div class="demo-banner">⚠ <strong>Demo mode</strong> — showing sample data. Upload your CRM CSV exports in the sidebar to see real numbers.</div>', unsafe_allow_html=True)
-
 st.divider()
 tab1, tab2 = st.tabs(["Overview", "Coming Soon"])
 
@@ -439,19 +437,21 @@ with tab1:
         total_won  = int(pipeline_df["closed_won"].sum())
         won_rate   = round(total_won / total_opps * 100, 1) if total_opps else 0
 
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3, c4 = st.columns(4)
         with c1:
-            card("Opportunities Created", f"{total_opps:,}",
+            card("Opportunities", f"{total_opps:,}",
                  sub="Excludes migration / Ascend records",
                  note="Sum across all partner firms and sources.")
         with c2:
-            card("Closed Won", f"{total_won:,}",
-                 sub=f"{won_rate}% close rate",
-                 note="Opportunities with a Closed Won outcome.")
-        with c3:
             card("Service Lines", f"{int(pipeline_df['service_line_count'].sum()):,}",
                  sub="across all opportunities",
                  note="Total service line records linked to opportunities.")
+        with c3:
+            card("Closed Won", f"{total_won:,}",
+                 note="Opportunities with a Closed Won outcome.")
+        with c4:
+            card("Close Rate", f"{won_rate}%",
+                 note="Closed Won / total Opportunities.")
 
         st.markdown("**Breakdown by firm**")
         breakdown = (
@@ -467,14 +467,37 @@ with tab1:
         breakdown = breakdown.rename(columns={"firm_name": "Firm", "Closed_Won": "Closed Won", "Service_Lines": "Service Lines"})
         st.dataframe(breakdown, use_container_width=True, hide_index=True)
 
-        st.markdown("**AI email vs Manual intake**")
+        st.markdown("**AI Email vs Manual — Opportunities by Firm**")
         source_grp = (
             pipeline_df
             .groupby(["firm_name", "source"], as_index=False)
             .agg(Opportunities=("opportunity_count", "sum"))
             .rename(columns={"firm_name": "Firm", "source": "Source"})
         )
-        st.dataframe(source_grp, use_container_width=True, hide_index=True)
+        source_grp["Source"] = source_grp["Source"].replace({"ai_email": "AI Email", "manual": "Manual"})
+
+        ch1, ch2 = st.columns([2, 1])
+        with ch1:
+            fig_bar = px.bar(
+                source_grp, x="Firm", y="Opportunities", color="Source",
+                barmode="group",
+                color_discrete_map={"AI Email": "#2E75B6", "Manual": "#70AD47"},
+                height=320,
+            )
+            fig_bar.update_layout(margin=dict(t=20, b=20), legend_title_text="")
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        with ch2:
+            source_total = source_grp.groupby("Source")["Opportunities"].sum().reset_index()
+            fig_pie = px.pie(
+                source_total, values="Opportunities", names="Source",
+                color="Source",
+                color_discrete_map={"AI Email": "#2E75B6", "Manual": "#70AD47"},
+                height=320,
+            )
+            fig_pie.update_traces(textinfo="percent+label")
+            fig_pie.update_layout(margin=dict(t=20, b=20), showlegend=False)
+            st.plotly_chart(fig_pie, use_container_width=True)
 
     else:
         st.info("Upload **pipeline_summary.csv** in the sidebar to see the Executive Summary.")
