@@ -503,7 +503,7 @@ with tab1:
             chart_rows.append({"Firm": row["firm_name"], "Category": "AI Email — Approved", "Opportunities": row["opportunity_count"]})
         for _, row in ai_pend.iterrows():
             chart_rows.append({"Firm": row["firm_name"], "Category": "AI Email — Pending", "Opportunities": row["opportunity_count"]})
-        chart_grp = pd.DataFrame(chart_rows).groupby(["Firm", "Category"], as_index=False).sum()
+        chart_grp = pd.DataFrame(chart_rows).groupby(["Firm", "Category"], as_index=False)[["Opportunities"]].sum()
 
         color_map = {
             "Manual":              "#70AD47",
