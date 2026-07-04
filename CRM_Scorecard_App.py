@@ -390,11 +390,9 @@ if up_pipeline:
     pipeline_df = load_csv(up_pipeline, "pipeline_summary")
 else:
     try:
-        import os
-        _csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pipeline_summary.csv")
-        pipeline_df = pd.read_csv(_csv)
+        pipeline_df = pd.read_csv("pipeline_summary.csv")
         pipeline_df.columns = [c.strip().lower().replace(" ", "_") for c in pipeline_df.columns]
-    except FileNotFoundError:
+    except Exception:
         pipeline_df = None
 
 demo_mode = not any([up_opps, up_stages, up_refs, up_tasks, up_acts, up_users])
