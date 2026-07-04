@@ -444,14 +444,11 @@ with tab1:
         # Segment rows — normalize intake_pending to string for safe comparison
         df = pipeline_df.copy()
         df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
-        # UI rows: source = "UI" (intake_pending = "nan")
-        # email approved: source = "Email", intake_pending = "false"
-        # email pending:  source = "Email", intake_pending = "true"
-        
-        
-        manual   = df[df["source"] == "UI"]
-        ai_appr  = df[(df["source"] == "Email") & (df["intake_pending"] == "false")]
-        ai_pend  = df[(df["source"] == "Email") & (df["intake_pending"] == "true")]
+        df["source"] = df["source"].astype(str).str.strip()
+        # Normalize: UI entry vs Email intake
+        manual   = df[df["source"].str.upper() == "UI"]
+        ai_appr  = df[(df["source"].str.upper() == "EMAIL") & (df["intake_pending"] == "false")]
+        ai_pend  = df[(df["source"].str.upper() == "EMAIL") & (df["intake_pending"] == "true")]
         approved = pd.concat([manual, ai_appr])
 
         opps_appr  = int(approved["opportunity_count"].sum())
@@ -513,7 +510,10 @@ with tab1:
             chart_rows.append({"Firm": row["firm_name"], "Category": "Email — Approved", "Opportunities": row["opportunity_count"]})
         for _, row in ai_pend.iterrows():
             chart_rows.append({"Firm": row["firm_name"], "Category": "Email — Pending", "Opportunities": row["opportunity_count"]})
-        chart_grp = pd.DataFrame(chart_rows).groupby(["Firm", "Category"], as_index=False)[["Opportunities"]].sum()
+        if chart_rows:
+            chart_grp = pd.DataFrame(chart_rows).groupby(["Firm", "Category"], as_index=False)[["Opportunities"]].sum()
+        else:
+            chart_grp = pd.DataFrame(columns=["Firm", "Category", "Opportunities"])
 
         color_map = {
             "UI Entry":             "#70AD47",
