@@ -201,6 +201,7 @@ REQUIRED_COLS = {
     "activities":    ["activity_id","opportunity_id","activity_type","created_by","created_date","firm_id"],
     "referrals":     ["referral_id","created_date","linked_opportunity_id","linked_opportunity_date","outcome","firm_id"],
     "users":         ["user_id","firm_id","role","logged_in_this_month","manually_engaged_this_month"],
+    "pipeline_summary": ["firm_name","source","opportunity_count","service_line_count","closed_won"],
 }
 
 def load_csv(upload, name):
@@ -340,6 +341,7 @@ with st.sidebar:
     st.markdown("### Upload CRM Exports")
     st.caption("All columns must match the spec below. Leave empty to use demo data.")
 
+    up_pipeline = st.file_uploader("pipeline_summary.csv", type="csv", key="pipeline")
     up_opps   = st.file_uploader("opportunities.csv",  type="csv", key="opps")
     up_stages = st.file_uploader("stage_history.csv",  type="csv", key="stages")
     up_refs   = st.file_uploader("referrals.csv",      type="csv", key="refs")
@@ -355,6 +357,9 @@ with st.sidebar:
     st.divider()
     with st.expander("📋 CSV column specs"):
         st.markdown("""
+**pipeline_summary.csv**
+`firm_name, source, intake_pending, opportunity_count, service_line_count, closed_won`
+
 **opportunities.csv**
 `opportunity_id, prospect_id, opportunity_type, date_created, actual_completion_date, outcome, firm_id`
 
@@ -379,6 +384,8 @@ For boolean columns: `TRUE`/`FALSE` or `1`/`0`.
 
 
 # ─── Load data ────────────────────────────────────────────────────────
+pipeline_df = load_csv(up_pipeline, "pipeline_summary") if up_pipeline else None
+
 demo_mode = not any([up_opps, up_stages, up_refs, up_tasks, up_acts, up_users])
 
 if demo_mode:
@@ -421,6 +428,54 @@ if demo_mode:
     st.markdown('<div class="demo-banner">⚠ <strong>Demo mode</strong> — showing sample data. Upload your CRM CSV exports in the sidebar to see real numbers.</div>', unsafe_allow_html=True)
 
 st.divider()
+
+# ─── Executive Summary ────────────────────────────────────────────────
+if pipeline_df is not None and not pipeline_df.empty:
+    st.markdown('<div class="section-head">Executive Summary</div>', unsafe_allow_html=True)
+
+    total_opps    = int(pipeline_df["opportunity_count"].sum())
+    total_won     = int(pipeline_df["closed_won"].sum())
+    won_rate      = round(total_won / total_opps * 100, 1) if total_opps else 0
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        card("Opportunities Created", f"{total_opps:,}",
+             sub="Excludes migration / Ascend records",
+             note="Sum across all partner firms and sources.")
+    with c2:
+        card("Closed Won", f"{total_won:,}",
+             sub=f"{won_rate}% close rate",
+             note="Opportunities with a Closed Won outcome.")
+    with c3:
+        card("Service Lines", f"{int(pipeline_df['service_line_count'].sum()):,}",
+             sub="across all opportunities",
+             note="Total service line records linked to opportunities.")
+
+    st.markdown("**Breakdown by firm**")
+    breakdown = (
+        pipeline_df
+        .groupby("firm_name", as_index=False)
+        .agg(
+            Opportunities=("opportunity_count", "sum"),
+            Closed_Won=("closed_won", "sum"),
+            Service_Lines=("service_line_count", "sum"),
+        )
+    )
+    breakdown["Close Rate %"] = (breakdown["Closed_Won"] / breakdown["Opportunities"] * 100).round(1)
+    breakdown = breakdown.rename(columns={"firm_name": "Firm", "Closed_Won": "Closed Won", "Service_Lines": "Service Lines"})
+    st.dataframe(breakdown, use_container_width=True, hide_index=True)
+
+    # AI email vs manual split
+    st.markdown("**AI email vs Manual intake**")
+    source_grp = (
+        pipeline_df
+        .groupby(["firm_name", "source"], as_index=False)
+        .agg(Opportunities=("opportunity_count", "sum"))
+        .rename(columns={"firm_name": "Firm", "source": "Source"})
+    )
+    st.dataframe(source_grp, use_container_width=True, hide_index=True)
+
+    st.divider()
 
 
 # ─── M1 + M2: Deal Velocity ───────────────────────────────────────────
