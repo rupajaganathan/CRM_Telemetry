@@ -443,8 +443,13 @@ with tab1:
 
         # Segment rows — normalize intake_pending to string for safe comparison
         df = pipeline_df.copy()
+        # DEBUG — remove after diagnosis
+        st.expander("🔍 Debug: columns in loaded CSV").write(df.columns.tolist())
         if "intake_pending" not in df.columns:
             df["intake_pending"] = "null"
+        if "source" not in df.columns:
+            st.error(f"'source' column not found. Columns present: {df.columns.tolist()}")
+            st.stop()
         df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
         df["source"] = df["source"].astype(str).str.strip().str.lower()
         # Accept both naming conventions: ui/manual and email/ai_email
