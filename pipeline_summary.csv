@@ -1,0 +1,19 @@
+"firm_name","source","intake_pending","opportunity_count","service_line_count","closed_won"
+"ATKG","Email",False,26,49,0
+"ATKG","Email",True,26,43,0
+"ATKG","UI",NULL,18,28,0
+"LevitZacks","Email",False,47,100,1
+"LevitZacks","Email",True,55,74,0
+"LevitZacks","UI",NULL,11,13,2
+"Lucas Horsfall","Email",False,103,161,0
+"Lucas Horsfall","Email",True,83,130,0
+"Lucas Horsfall","UI",NULL,4,5,3
+"Opsahl Dawson","Email",False,154,280,1
+"Opsahl Dawson","Email",True,143,202,0
+"Opsahl Dawson","UI",NULL,18,21,6
+"TSS","Email",False,32,51,0
+"TSS","Email",True,20,26,0
+"TSS","UI",NULL,13,14,3
+"Walter Shuffain","Email",False,178,365,0
+"Walter Shuffain","Email",True,150,206,0
+"Walter Shuffain","UI",NULL,6,10,0
