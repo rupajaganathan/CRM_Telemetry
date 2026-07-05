@@ -202,7 +202,7 @@ REQUIRED_COLS = {
     "activities":    ["activity_id","opportunity_id","activity_type","created_by","created_date","firm_id"],
     "referrals":     ["referral_id","created_date","linked_opportunity_id","linked_opportunity_date","outcome","firm_id"],
     "users":         ["user_id","firm_id","role","logged_in_this_month","manually_engaged_this_month"],
-    "pipeline_summary": ["firm_name","source","opportunity_count","service_line_count","closed_won"],
+    "pipeline_summary": ["firm_name","source","intake_pending","opportunity_count","service_line_count","closed_won"],
 }
 
 def load_csv(upload, name):
@@ -443,6 +443,8 @@ with tab1:
 
         # Segment rows — normalize intake_pending to string for safe comparison
         df = pipeline_df.copy()
+        if "intake_pending" not in df.columns:
+            df["intake_pending"] = "null"
         df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
         df["source"] = df["source"].astype(str).str.strip().str.lower()
         # Accept both naming conventions: ui/manual and email/ai_email
