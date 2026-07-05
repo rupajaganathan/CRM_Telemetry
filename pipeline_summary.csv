@@ -1,39 +1,19 @@
-SELECT
-"  firm_name,"
-"  source,"
-"  intake_pending,"
-"  COUNT(DISTINCT opportunity_id)                                         AS opportunity_count,"
-"  COUNT(service_line_id)                                                 AS service_line_count,"
-  COUNT(DISTINCT CASE WHEN opportunity_outcome = 'won' 
-                      THEN opportunity_id END)                           AS closed_won
-FROM (
-  SELECT
-"    f.firm_name,"
-    CASE
-      WHEN c.is_approved = false                               THEN 'Email'
-      WHEN osl.source = 'ai_email'                             THEN 'Email'
-      WHEN osl.source = 'manual' AND o.created_by IS NOT NULL  THEN 'UI'
-"    END                                                          AS source,"
-    CASE
-      WHEN c.is_approved = false                               THEN true
-      WHEN osl.source = 'ai_email'                             THEN false
-      ELSE NULL
-"    END                                                          AS intake_pending,"
-"    o.id                                                         AS opportunity_id,"
-"    osl.id                                                       AS service_line_id,"
-    o.opportunity_outcome
-  FROM firms f
-  JOIN contacts c      ON c.firm_id         = f.id
-  JOIN opportunities o ON o.contact_id      = c.id
-  LEFT JOIN opportunity_service_lines osl ON osl.opportunity_id = o.id
-  WHERE f.firm_name   != 'Ascend'
-"    AND c.contact_status NOT IN ('rejected', 'terminated', 'obsolete', 'lost')"
-    AND (
-      c.is_approved = false
-      OR osl.source = 'ai_email'
-      OR (osl.source = 'manual' AND o.created_by IS NOT NULL)
-    )
-) base
-WHERE source IS NOT NULL
-"GROUP BY firm_name, source, intake_pending"
-"ORDER BY firm_name, source, intake_pending ASC NULLS LAST;"
+"firm_name","source","intake_pending","opportunity_count","service_line_count","closed_won"
+"ATKG","ai_email",False,9,19,0
+"ATKG","ai_email",True,17,33,0
+"ATKG","manual",NULL,18,28,0
+"LevitZacks","ai_email",False,21,53,0
+"LevitZacks","ai_email",True,27,46,0
+"LevitZacks","manual",NULL,9,11,2
+"Lucas Horsfall","ai_email",False,79,127,0
+"Lucas Horsfall","ai_email",True,11,18,0
+"Lucas Horsfall","manual",NULL,4,5,3
+"Opsahl Dawson","ai_email",False,46,77,1
+"Opsahl Dawson","ai_email",True,106,196,0
+"Opsahl Dawson","manual",NULL,19,22,6
+"TSS","ai_email",False,5,8,0
+"TSS","ai_email",True,25,41,0
+"TSS","manual",NULL,13,14,3
+"Walter Shuffain","ai_email",False,68,118,0
+"Walter Shuffain","ai_email",True,107,244,0
+"Walter Shuffain","manual",NULL,5,9,0
