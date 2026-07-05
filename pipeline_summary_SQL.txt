@@ -4,7 +4,7 @@ SELECT
   intake_pending,
   COUNT(DISTINCT opportunity_id)                                         AS opportunity_count,
   COUNT(service_line_id)                                                 AS service_line_count,
-  COUNT(DISTINCT CASE WHEN opportunity_outcome = 'won' 
+  COUNT(DISTINCT CASE WHEN opportunity_outcome = 'won'
                       THEN opportunity_id END)                           AS closed_won
 FROM (
   SELECT
@@ -21,13 +21,16 @@ FROM (
     END                                                          AS intake_pending,
     o.id                                                         AS opportunity_id,
     osl.id                                                       AS service_line_id,
-    o.opportunity_outcome
+    o.opportunity_outcome,
+    o.inserted_at                                                AS opportunity_created
   FROM firms f
-  JOIN contacts c      ON c.firm_id         = f.id
-  JOIN opportunities o ON o.contact_id      = c.id
+  JOIN contacts c      ON c.firm_id      = f.id
+  JOIN opportunities o ON o.contact_id   = c.id
   LEFT JOIN opportunity_service_lines osl ON osl.opportunity_id = o.id
   WHERE f.firm_name   != 'Ascend'
     AND c.contact_status NOT IN ('rejected', 'terminated', 'obsolete', 'lost')
+    AND o.inserted_at >= '2026-06-01'
+    AND o.inserted_at <  '2026-07-01'
     AND (
       c.is_approved = false
       OR osl.source = 'ai_email'
