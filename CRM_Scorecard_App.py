@@ -431,7 +431,7 @@ if "firm_id" in opps_df.columns:
 
 # ─── Header ───────────────────────────────────────────────────────────
 st.markdown("## 📊 CRM Scorecard")
-st.caption(f"Ascend Together | Net-new metrics not tracked in existing reports | As of {today.strftime('%B %d, %Y')}")
+st.caption("Ascend Together | Net-new metrics not tracked in existing reports | Reporting period: June 2026")
 
 st.divider()
 tab1, tab2 = st.tabs(["Overview", "Coming Soon"])
@@ -443,8 +443,6 @@ with tab1:
 
         # Segment rows — normalize intake_pending to string for safe comparison
         df = pipeline_df.copy()
-        # DEBUG — remove after diagnosis
-        st.expander("🔍 Debug: columns in loaded CSV").write(df.columns.tolist())
         if "intake_pending" not in df.columns:
             df["intake_pending"] = "null"
         if "source" not in df.columns:
