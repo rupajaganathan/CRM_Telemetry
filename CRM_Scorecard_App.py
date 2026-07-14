@@ -492,29 +492,33 @@ with tab1:
             st.stop()
         df["intake_pending"] = df["intake_pending"].astype(str).str.strip().str.lower()
         df["source"] = df["source"].astype(str).str.strip().str.lower()
-        # Accept both naming conventions: ui/manual and email/ai_email
+        # Accept naming conventions: ui/manual, email/ai_email, chat/chat_agent
         ui_vals    = ["ui", "manual"]
         email_vals = ["email", "ai_email"]
+        chat_vals  = ["chat", "chat_agent"]
         manual   = df[df["source"].isin(ui_vals)]
+        chat     = df[df["source"].isin(chat_vals)]
         ai_appr  = df[(df["source"].isin(email_vals)) & (df["intake_pending"] == "false")]
         ai_pend  = df[(df["source"].isin(email_vals)) & (df["intake_pending"] == "true")]
-        approved = pd.concat([manual, ai_appr])
+        # Chat (CRM assistant) is user-approved at write time, so it counts as approved intake.
+        approved = pd.concat([manual, ai_appr, chat])
 
         opps_appr  = int(approved["opportunity_count"].sum())
         opps_pend  = int(ai_pend["opportunity_count"].sum())
+        opps_chat  = int(chat["opportunity_count"].sum())
         sl_appr    = int(approved["service_line_count"].sum())
         sl_pend    = int(ai_pend["service_line_count"].sum())
         total_won  = int(approved["closed_won"].sum())
         won_rate   = round(total_won / opps_appr * 100, 1) if opps_appr else 0
 
         st.caption("Close Rate and Closed Won are calculated on **approved opportunities only** "
-                   "(Manual + AI Email reviewed). AI Email pending review is shown separately.")
+                   "(Manual + AI Email reviewed + CRM Assistant). AI Email pending review is shown separately.")
 
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1:
             card("Opps — Approved", f"{opps_appr:,}",
                  sub=f"+ {opps_pend:,} pending review",
-                 note="Manual entries + AI Email approved by a user.")
+                 note="Manual + AI Email approved + CRM Assistant.")
         with c2:
             card("Service Lines — Approved", f"{sl_appr:,}",
                  sub=f"+ {sl_pend:,} pending review",
@@ -529,6 +533,14 @@ with tab1:
                  note="AI pending excluded — not yet in the real pipeline.")
         with c5:
             st.markdown(f"""
+            <div class="metric-card" style="border-left-color: #7c3aed;">
+              <div class="metric-label">CRM Assistant (Chat)</div>
+              <div class="metric-value" style="color:#6d28d9;">{opps_chat:,}</div>
+              <div class="metric-sub">opps created via chat</div>
+              <div class="data-note">Included in Approved. Source = chat_agent.</div>
+            </div>""", unsafe_allow_html=True)
+        with c6:
+            st.markdown(f"""
             <div class="metric-card" style="border-left-color: #f59e0b;">
               <div class="metric-label">Email Opps — Pending Review</div>
               <div class="metric-value" style="color:#b45309;">{opps_pend:,}</div>
@@ -542,6 +554,7 @@ with tab1:
 
         bd = pd.DataFrame({"firm_name": df["firm_name"].unique()}).set_index("firm_name")
         bd["Opps Approved"]    = firm_agg(approved, "Opps Approved",    "opportunity_count")
+        bd["Opps Chat"]        = firm_agg(chat,     "Opps Chat",        "opportunity_count")
         bd["Opps Pending"]     = firm_agg(ai_pend,  "Opps Pending",     "opportunity_count")
         bd["SL Approved"]      = firm_agg(approved, "SL Approved",      "service_line_count")
         bd["SL Pending"]       = firm_agg(ai_pend,  "SL Pending",       "service_line_count")
@@ -551,10 +564,12 @@ with tab1:
         bd.index.name = "Firm"
         st.dataframe(bd, use_container_width=True)
 
-        st.markdown("**Intake breakdown by firm** — Manual / AI Approved / AI Pending")
+        st.markdown("**Intake breakdown by firm** — UI / Chat / AI Approved / AI Pending")
         chart_rows = []
         for _, row in manual.iterrows():
             chart_rows.append({"Firm": row["firm_name"], "Category": "UI Entry", "Opportunities": row["opportunity_count"]})
+        for _, row in chat.iterrows():
+            chart_rows.append({"Firm": row["firm_name"], "Category": "Chat (Assistant)", "Opportunities": row["opportunity_count"]})
         for _, row in ai_appr.iterrows():
             chart_rows.append({"Firm": row["firm_name"], "Category": "Email — Approved", "Opportunities": row["opportunity_count"]})
         for _, row in ai_pend.iterrows():
@@ -566,6 +581,7 @@ with tab1:
 
         color_map = {
             "UI Entry":             "#70AD47",
+            "Chat (Assistant)":    "#7C3AED",
             "Email — Approved":    "#2E75B6",
             "Email — Pending":     "#F59E0B",
         }
