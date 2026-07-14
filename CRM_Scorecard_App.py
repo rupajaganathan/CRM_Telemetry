@@ -336,11 +336,37 @@ def card(label, value, sub="", status_html="", note=""):
     </div>""", unsafe_allow_html=True)
 
 
+# ─── Reporting-period discovery ────────────────────────────────────────
+# Monthly snapshots live next to this script as pipeline_summary_YYYY-MM.csv
+# (e.g. pipeline_summary_2026-06.csv). Drop a new month's file in and it shows
+# up in the selector automatically — no code change needed.
+import os as _os, glob as _glob, re as _re, datetime as _dt
+
+def discover_periods():
+    here = _os.path.dirname(_os.path.abspath(__file__))
+    found = {}
+    for path in _glob.glob(_os.path.join(here, "pipeline_summary_*.csv")):
+        m = _re.search(r"pipeline_summary_(\d{4})-(\d{2})\.csv$", _os.path.basename(path))
+        if m:
+            y, mo = int(m.group(1)), int(m.group(2))
+            label = _dt.date(y, mo, 1).strftime("%B %Y")
+            found[label] = (path, (y, mo))
+    # newest month first
+    return dict(sorted(found.items(), key=lambda kv: kv[1][1], reverse=True))
+
+PERIODS = discover_periods()
+
+
 # ─── Sidebar — file uploads ────────────────────────────────────────────
 with st.sidebar:
     st.image("https://img.shields.io/badge/Ascend-CRM%20Scorecard-1F3864?style=flat-square", width=200)
+    if PERIODS:
+        st.markdown("### Reporting period")
+        selected_period = st.selectbox("Month", list(PERIODS.keys()), index=0, key="period_sel")
+        st.divider()
+
     st.markdown("### Upload CRM Exports")
-    st.caption("All columns must match the spec below. Leave empty to use demo data.")
+    st.caption("Uploading a pipeline_summary.csv here overrides the selected month. Leave empty to use demo data.")
 
     up_pipeline = st.file_uploader("pipeline_summary.csv", type="csv", key="pipeline")
     up_opps   = st.file_uploader("opportunities.csv",  type="csv", key="opps")
@@ -385,13 +411,28 @@ For boolean columns: `TRUE`/`FALSE` or `1`/`0`.
 
 
 # ─── Load data ────────────────────────────────────────────────────────
-# Load pipeline: use upload if provided, otherwise fall back to bundled CSV in repo
+# Pipeline source priority: (1) sidebar upload, (2) selected monthly snapshot,
+# (3) legacy bundled pipeline_summary.csv (labelled June 2026 for back-compat).
+def _read_pipeline_csv(path_or_buf):
+    df = pd.read_csv(path_or_buf)
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    return df
+
+period_label = None
 if up_pipeline:
     pipeline_df = load_csv(up_pipeline, "pipeline_summary")
+    period_label = "Uploaded file"
+elif PERIODS:
+    selected_period = st.session_state.get("period_sel", next(iter(PERIODS)))
+    try:
+        pipeline_df = _read_pipeline_csv(PERIODS[selected_period][0])
+        period_label = selected_period
+    except Exception:
+        pipeline_df = None
 else:
     try:
-        pipeline_df = pd.read_csv("pipeline_summary.csv")
-        pipeline_df.columns = [c.strip().lower().replace(" ", "_") for c in pipeline_df.columns]
+        pipeline_df = _read_pipeline_csv("pipeline_summary.csv")
+        period_label = "June 2026"
     except Exception:
         pipeline_df = None
 
@@ -431,7 +472,8 @@ if "firm_id" in opps_df.columns:
 
 # ─── Header ───────────────────────────────────────────────────────────
 st.markdown("## 📊 CRM Scorecard")
-st.caption("Ascend Together | Net-new metrics not tracked in existing reports | Reporting period: June 2026")
+st.caption("Ascend Together | Net-new metrics not tracked in existing reports | "
+           f"Reporting period: {period_label or 'June 2026'}")
 
 st.divider()
 tab1, tab2 = st.tabs(["Overview", "Coming Soon"])
