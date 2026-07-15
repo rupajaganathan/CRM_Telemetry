@@ -1,19 +1,21 @@
 "firm_name","source","intake_pending","opportunity_count","service_line_count","closed_won"
-"ATKG","Email",False,24,32,0
-"ATKG","Email",True,15,17,0
+"ATKG","Chat",False,1,3,0
+"ATKG","Email",False,25,33,0
+"ATKG","Email",True,13,15,0
 "LevitZacks","Chat",False,6,7,1
 "LevitZacks","Email",False,41,55,0
-"LevitZacks","Email",True,43,55,0
+"LevitZacks","Email",True,49,61,0
 "Lucas Horsfall","Chat",False,12,12,8
-"Lucas Horsfall","Email",False,105,145,0
-"Lucas Horsfall","Email",True,67,80,0
+"Lucas Horsfall","Email",False,106,149,0
+"Lucas Horsfall","Email",True,68,82,0
 "Lucas Horsfall","UI",NULL,1,1,0
-"Opsahl Dawson","Email",False,118,180,0
-"Opsahl Dawson","Email",True,92,122,0
+"Opsahl Dawson","Chat",False,2,2,0
+"Opsahl Dawson","Email",False,123,185,0
+"Opsahl Dawson","Email",True,96,127,0
 "Opsahl Dawson","UI",NULL,2,2,1
 "TSS","Email",False,41,54,0
-"TSS","Email",True,23,31,0
-"Walter Shuffain","Chat",False,2,2,0
-"Walter Shuffain","Email",False,102,133,0
-"Walter Shuffain","Email",True,142,178,0
+"TSS","Email",True,26,35,0
+"Walter Shuffain","Chat",False,3,3,0
+"Walter Shuffain","Email",False,109,141,0
+"Walter Shuffain","Email",True,145,180,0
 "Walter Shuffain","UI",NULL,1,1,0
